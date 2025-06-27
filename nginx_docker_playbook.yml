@@ -1,0 +1,72 @@
+---
+- name: Install Docker and manage NGINX container
+  hosts: dev
+  become: yes
+
+  vars:
+    dockerhub_username: shalini7411
+    dockerhub_image: ansi_nginx
+
+  vars_prompt:
+    - name: dockerhub_token
+      prompt: "Enter your Docker Hub access token"
+      private: yes
+
+  tasks:
+
+    - name: Install Docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Pull NGINX image
+      shell: docker pull nginx
+      args:
+        warn: false
+
+    - name: Remove existing NGINX container if present
+      shell: docker rm -f mynginx || true
+      args:
+        warn: false
+
+    - name: Run NGINX container
+      shell: docker run -d --name mynginx -p 8080:80 nginx
+      args:
+        warn: false
+
+    - name: Commit container to new image
+      shell: docker commit mynginx {{ dockerhub_username }}/{{ dockerhub_image }}:latest
+      args:
+        warn: false
+
+    - name: Log in to Docker Hub
+      command: docker login -u {{ dockerhub_username }} --password-stdin
+      args:
+        stdin: "{{ dockerhub_token }}"
+        warn: false
+
+    - name: Push image to Docker Hub
+      shell: docker push {{ dockerhub_username }}/{{ dockerhub_image }}:latest
+      args:
+        warn: false
+
+    - name: Stop and remove the container
+      shell: docker rm -f mynginx
+      args:
+        warn: false
+
+    - name: Remove nginx base image
+      shell: docker rmi nginx
+      args:
+        warn: false
+
+    - name: Remove custom image
+      shell: docker rmi {{ dockerhub_username }}/{{ dockerhub_image }}:latest || true
+      args:
+        warn: false
