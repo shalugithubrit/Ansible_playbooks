@@ -1,0 +1,12 @@
+---
+- name: sample playbook
+  hosts: dev
+  user: ansible
+  become: yes
+  connection: ssh
+  gather_facts: no
+  tasks:
+    - name: install git
+      command: yum install git -y
+    - name: install java
+      command: yum install java-17* -y
