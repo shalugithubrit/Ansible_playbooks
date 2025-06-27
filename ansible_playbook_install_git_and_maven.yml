@@ -1,0 +1,47 @@
+---
+- name: sample playbook
+  hosts: dev
+  user: ansible
+  become: yes
+  connection: ssh
+  gather_facts: no
+  vars:
+    remote_script: /tmp/install_maven.sh
+    maven_path: /root/maven
+    maven_version: "3.9.6"
+
+  tasks:
+    - name: Create install_maven.sh script on remote host
+      copy:
+        dest: "{{ remote_script }}"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          MAVEN_VERSION={{ maven_version }}
+          INSTALL_DIR={{ maven_path }}
+
+          # Install dependencies
+          yum install -y curl tar
+
+          # Download Maven
+          curl -O https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz
+
+          # Create install directory and extract
+          mkdir -p $INSTALL_DIR
+          tar -xvzf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C $INSTALL_DIR --strip-components=1
+          # Set environment variables
+          echo "export M2_HOME=$INSTALL_DIR" >> /etc/profile.d/maven.sh
+          echo 'export PATH=$M2_HOME/bin:$PATH' >> /etc/profile.d/maven.sh
+          # Load new environment variables for current session
+          source /etc/profile.d/maven.sh
+
+    - name: Run the Maven install script
+      shell: "{{ remote_script }}"
+      args:
+        creates: "{{ maven_path }}/bin/mvn"
+
+    - name: install git
+      command: yum install git -y
+
+    - name: Clone GitHub Maven Project
+  i    shell: git clone https://github.com/shalugithubrit/Music-player.git
